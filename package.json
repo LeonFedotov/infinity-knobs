@@ -1,0 +1,55 @@
+{
+  "name": "infinity-knobs",
+  "version": "0.1.0",
+  "description": "Precise, endless MIDI knobs in the browser: speed-sensitive acceleration, endless knobs through value feedback, and relative encoder decoding for Web MIDI.",
+  "keywords": [
+    "midi",
+    "web-midi",
+    "webmidi",
+    "knob",
+    "encoder",
+    "rotary-encoder",
+    "endless",
+    "acceleration",
+    "controller",
+    "cc",
+    "control-change",
+    "relative",
+    "mpd218"
+  ],
+  "homepage": "https://github.com/LeonFedotov/infinity-knobs#readme",
+  "bugs": {
+    "url": "https://github.com/LeonFedotov/infinity-knobs/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LeonFedotov/infinity-knobs.git"
+  },
+  "license": "MIT",
+  "author": "Leon Fedotov (https://leonfedotov.com)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "node -e \"process.getBuiltinModule('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc -p tsconfig.json",
+    "prepublishOnly": "pnpm run typecheck && pnpm run test && pnpm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2"
+  },
+  "packageManager": "pnpm@12.5.1"
+}

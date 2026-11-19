@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="infinity-knobs logo">
+  <defs>
+    <radialGradient id="cap" cx="50%" cy="36%" r="70%">
+      <stop offset="0" stop-color="#1d261d"/>
+      <stop offset="1" stop-color="#090e09"/>
+    </radialGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+    <path id="trace" d="M128 134C136.6 124.6 145.3 115.2 153.3 108.5C161.2 101.9 168.6 98 174.7 98C180.8 98 185.7 101.9 189 108.5C192.3 115.2 194 124.6 194 134C194 143.4 192.3 152.8 189 159.5C185.7 166.1 180.8 170 174.7 170C168.6 170 161.2 166.1 153.3 159.5C145.3 152.8 136.6 143.4 128 134C119.4 124.6 110.7 115.2 102.7 108.5C94.8 101.9 87.4 98 81.3 98C75.2 98 70.3 101.9 67 108.5C63.7 115.2 62 124.6 62 134C62 143.4 63.7 152.8 67 159.5C70.3 166.1 75.2 170 81.3 170C87.4 170 94.8 166.1 102.7 159.5C110.7 152.8 119.4 143.4 128 134Z"/>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="#050805"/>
+  <circle cx="128" cy="128" r="100" fill="url(#cap)" stroke="#283428" stroke-width="3"/>
+  <circle cx="128" cy="128" r="93" fill="none" stroke="#131b13" stroke-width="5" stroke-dasharray="3 6"/>
+  <line x1="128" y1="34" x2="128" y2="54" stroke="#00ff00" stroke-width="7" stroke-linecap="round"/>
+  <g fill="none" stroke="#00ff00" stroke-linecap="round" stroke-linejoin="round">
+    <use href="#trace" stroke-width="15" opacity=".5" filter="url(#glow)"/>
+    <use href="#trace" stroke-width="6.5"/>
+    <use href="#trace" stroke="#d4ffd4" stroke-width="2.2"/>
+  </g>
+  <circle cx="174.7" cy="98" r="6.5" fill="#f2fff2"/>
+</svg>
