@@ -86,6 +86,8 @@
     import { knob, requestMidiAccess } from '../dist/index.js'
 
     const $ = (id) => document.getElementById(id)
+    // The library loaded, so the build hint in the markup (shown if it didn't) can go
+    $('status').textContent = 'Plug in a MIDI controller, then press Connect MIDI.'
     let access
     let frequency
     let resets = 0
