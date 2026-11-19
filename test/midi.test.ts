@@ -9,7 +9,7 @@ const close = (actual: number, expected: number, tolerance = 1e-9): void => {
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} is not within ${tolerance} of ${expected}`)
 }
 
-// Listens with curve's steps, recording every turn
+// Listens with steps of 0.25 and 50 (cents, for example), recording every turn
 const record = (access: MIDIAccess, options: Partial<ListenOptions> = {}): { turns: MidiTurn[], dispose: () => void } => {
   const turns: MidiTurn[] = []
   const { dispose } = listen(access, { ...steps, ...options, onTurn: (turn) => turns.push(turn) })

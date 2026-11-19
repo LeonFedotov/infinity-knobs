@@ -18,7 +18,7 @@ A MIDI knob sends a 7-bit value: 128 positions from end to end. That is too coar
 
 infinity-knobs reads a knob's movement instead of its position. Turned slowly, each value is a tiny step; spun hard, a big one. And on controllers that accept values sent back to them, it keeps the knob away from its ends, so it never runs out.
 
-It was written for [curve](https://curve.localheist.com) and tuned on an Akai MPD218, but it works with any controller that sends Control Change messages.
+It is tuned on an Akai MPD218, but it works with any controller that sends Control Change messages.
 
 ## Features
 
@@ -227,7 +227,7 @@ speed = min(1, (rate / fastRate)³)
 step  = delta × (fine + (coarse − fine) × speed)
 ```
 
-- **The cube** keeps slow turns fine. With curve's steps (`fine` 0.25 cents, `coarse` 50 cents) and the default `fastRate` of 400 values a second, a careful turn at 60 values a second steps about 0.42 cents per value, 130 values a second about 2 cents, 200 about 6.5 cents, and 400 or more the full 50 cents. A hard spin at 500 values a second moves 25,000 cents a second, so 20 Hz to 20 kHz (about 10 octaves) takes half a second, while a careful turn still lands within a cent.
+- **The cube** keeps slow turns fine. With steps of `fine` 0.25 cents and `coarse` 50 cents and the default `fastRate` of 400 values a second, a careful turn at 60 values a second steps about 0.42 cents per value, 130 values a second about 2 cents, 200 about 6.5 cents, and 400 or more the full 50 cents. A hard spin at 500 values a second moves 25,000 cents a second, so 20 Hz to 20 kHz (about 10 octaves) takes half a second, while a careful turn still lands within a cent.
 - **Averaging** with the previous rate absorbs USB bursts: two messages that arrive a millisecond apart would otherwise look like a spin of thousands of values a second.
 - **The pause** of 250 ms resets the speed, so the first nudge after the knob stops is fine again.
 - **The first message only anchors** an absolute knob. Its old position is unknown, so moving from it would make the value jump.
@@ -298,18 +298,15 @@ The tests need Node 22.18 or later, for type stripping. The Web MIDI layer is te
 
 ## Releasing
 
-Publishing to npm is automatic: bump the version and push the tag.
+Publishing is automatic. To release, bump the version and merge it to `main`:
 
 ```sh
-npm version patch   # or minor or major: updates package.json, commits and tags vX.Y.Z
-git push --follow-tags
+npm version patch --no-git-tag-version   # or minor or major; updates package.json
 ```
 
-The Publish workflow checks that the tag matches `package.json`, then runs the typecheck, tests and build and publishes. It uses npm [trusted publishing](https://docs.npmjs.com/trusted-publishers): npm accepts releases only from this repository's `publish.yml`, so no npm token is stored anywhere, and each release gets a provenance statement. A tag for a version that is already on npm is skipped.
+Commit that, push it and merge. On every push to `main`, the Publish workflow checks whether `package.json`'s version is already on npm. If it isn't, the workflow runs the typecheck, tests and build, publishes, and tags the commit `vX.Y.Z`. Pushes that don't change the version publish nothing.
 
-## Made for curve
-
-infinity-knobs was extracted from [curve](https://curve.localheist.com) ([source](https://github.com/LeonFedotov/curve)), an oscilloscope-style tool for exploring Lissajous figures, where it lets an MPD218 tune oscillators to within a fraction of a cent.
+It uses npm [trusted publishing](https://docs.npmjs.com/trusted-publishers): npm accepts releases only from this repository's `publish.yml`, so no npm token is stored anywhere, and each release gets a provenance statement.
 
 ## License
 
