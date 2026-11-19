@@ -6,6 +6,12 @@
 
 <p align="center">Precise, endless MIDI knobs in the browser.</p>
 
+<p align="center">
+  <a href="https://www.npmjs.com/package/infinity-knobs"><img src="https://img.shields.io/npm/v/infinity-knobs" alt="npm version"></a>
+  <a href="https://github.com/LeonFedotov/infinity-knobs/actions/workflows/ci.yml"><img src="https://github.com/LeonFedotov/infinity-knobs/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://leonfedotov.github.io/infinity-knobs/examples/"><img src="https://img.shields.io/badge/example-live-00c853" alt="Live example"></a>
+</p>
+
 ---
 
 A MIDI knob sends a 7-bit value: 128 positions from end to end. That is too coarse to land on an exact value (spread over 20 Hz–20 kHz, the steps are almost a semitone apart), and the knob runs out at either end, even when the hardware itself turns forever.
@@ -271,7 +277,7 @@ Web MIDI needs a secure context: serve the page over https, or from `localhost` 
 
 ## Example
 
-[`examples/index.html`](examples/index.html) shows a knob's value, speed, rate and resets. Build, then serve the repository root over localhost:
+[`examples/index.html`](examples/index.html) shows a knob's value, speed, rate and resets. Try it live at [leonfedotov.github.io/infinity-knobs/examples](https://leonfedotov.github.io/infinity-knobs/examples/) with a MIDI controller plugged in; the Pages workflow publishes it on every push to `main`. To run it locally, build, then serve the repository root over localhost:
 
 ```sh
 pnpm install
@@ -289,6 +295,17 @@ pnpm build       # compiles src to dist (JS and .d.ts)
 ```
 
 The tests need Node 22.18 or later, for type stripping. The Web MIDI layer is tested against fake ports that behave like an MPD218: they clamp to 0–127, go silent at the ends, and take feedback one message late. There is no linter; the code uses single quotes, no semicolons and two-space indentation.
+
+## Releasing
+
+Publishing to npm is automatic: bump the version and push the tag.
+
+```sh
+npm version patch   # or minor or major: updates package.json, commits and tags vX.Y.Z
+git push --follow-tags
+```
+
+The Publish workflow checks that the tag matches `package.json`, then runs the typecheck, tests and build and publishes. It uses npm [trusted publishing](https://docs.npmjs.com/trusted-publishers): npm accepts releases only from this repository's `publish.yml`, so no npm token is stored anywhere, and each release gets a provenance statement. A tag for a version that is already on npm is skipped.
 
 ## Made for curve
 

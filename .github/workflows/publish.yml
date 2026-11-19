@@ -1,0 +1,41 @@
+name: Publish to npm
+
+# Publishes when a version tag (v1.2.3) is pushed. npm trusted publishing checks that this workflow
+# in this repository is the one allowed to publish, so no npm token is stored anywhere, and npm
+# attaches provenance to the release automatically.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write # lets npm verify which workflow is publishing
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6 # the version comes from packageManager in package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24 # ships npm 11.19; trusted publishing needs 11.5.1 or later
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false # no caches in release builds
+      - name: Check the tag matches the version in package.json
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "The tag $GITHUB_REF_NAME does not match package.json's version $version"
+            exit 1
+          fi
+      - run: pnpm install --frozen-lockfile
+      # prepublishOnly runs the typecheck, the tests and the build before anything is published
+      - name: Publish, unless this version is already on npm
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if npm view "infinity-knobs@$version" version > /dev/null 2>&1; then
+            echo "infinity-knobs@$version is already on npm; nothing to publish"
+          else
+            npm publish --access public
+          fi

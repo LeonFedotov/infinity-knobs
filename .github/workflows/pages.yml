@@ -1,0 +1,59 @@
+name: Pages
+
+# Publishes the example to GitHub Pages on every push to main. The example imports ../dist and
+# ../logo.svg, so the site keeps the repository's layout and its root forwards to examples/.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6 # the version comes from packageManager in package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Assemble the site
+        run: |
+          mkdir -p _site
+          cp -R dist examples logo.svg _site/
+          cat > _site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+          <meta charset="utf-8">
+          <title>infinity-knobs</title>
+          <meta http-equiv="refresh" content="0; url=examples/">
+          <link rel="canonical" href="examples/">
+          <link rel="icon" href="logo.svg" type="image/svg+xml">
+          <p><a href="examples/">infinity-knobs example</a></p>
+          </html>
+          HTML
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
