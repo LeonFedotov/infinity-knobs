@@ -56,7 +56,7 @@
       font-variant-numeric: tabular-nums;
     }
     .meter { height: 0.6rem; margin: 0.75rem 0 1.25rem; background: var(--panel); border: 1px solid var(--line); border-radius: 99px; overflow: hidden; }
-    .meter div { height: 100%; width: 0; background: var(--green); box-shadow: 0 0 10px var(--green); transition: width 80ms linear; }
+    .meter div { height: 100%; width: 0; background: var(--green); box-shadow: 0 0 10px var(--green); }
     dl { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 1.5rem; margin: 0 0 1rem; }
     dt { color: var(--dim); }
     dd { margin: 0; font-variant-numeric: tabular-nums; }
@@ -99,14 +99,15 @@
     let frequency
     let resets = 0
     let lastTurnAt = 0
+    let lastSpeed = 0
 
     const show = (hz, turn) => {
       $('value').textContent = `${hz.toFixed(3)} Hz`
       $('speed').textContent = turn.speed.toFixed(3)
       $('rate').textContent = `${Math.round(turn.rate)} values/s`
-      $('meter').style.width = `${turn.speed * 100}%`
       $('last').textContent = `CC ${turn.cc} = ${turn.value} on channel ${turn.channel + 1} (${turn.delta >= 0 ? '+' : ''}${turn.delta})`
       if (turn.recentred) $('resets').textContent = String(++resets)
+      lastSpeed = turn.speed
       lastTurnAt = performance.now()
     }
 
@@ -127,9 +128,11 @@
       })
     }
 
-    // The meter falls back to rest once the knob stops
+    // The meter shows the speed once per frame, and falls back to rest once the knob stops.
+    // Setting it per message (every 10 ms on a fast spin) would keep restarting any animation.
     const settle = () => {
-      if (performance.now() - lastTurnAt > 250) $('meter').style.width = '0'
+      const speed = performance.now() - lastTurnAt > 250 ? 0 : lastSpeed
+      $('meter').style.width = `${speed * 100}%`
       requestAnimationFrame(settle)
     }
 
