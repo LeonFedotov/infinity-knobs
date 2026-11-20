@@ -1,6 +1,6 @@
 {
   "name": "infinity-knobs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Precise, endless MIDI knobs in the browser: speed-sensitive acceleration, endless knobs through value feedback, and relative encoder decoding for Web MIDI.",
   "keywords": [
     "midi",
@@ -17,7 +17,7 @@
     "relative",
     "mpd218"
   ],
-  "homepage": "https://github.com/LeonFedotov/infinity-knobs#readme",
+  "homepage": "https://leonfedotov.github.io/infinity-knobs/examples/",
   "bugs": {
     "url": "https://github.com/LeonFedotov/infinity-knobs/issues"
   },

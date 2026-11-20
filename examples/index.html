@@ -61,6 +61,9 @@
     dt { color: var(--dim); }
     dd { margin: 0; font-variant-numeric: tabular-nums; }
     #status { min-height: 1.5em; }
+    .links { margin-top: 2rem; font-size: 0.9em; }
+    .links a { color: var(--text); text-decoration-color: var(--dim); text-underline-offset: 3px; }
+    .links a:hover { color: var(--green); }
   </style>
 </head>
 <body>
@@ -81,6 +84,10 @@
       <dt>resets sent</dt><dd id="resets">0</dd>
     </dl>
     <p id="status">Build first (pnpm build), then serve the repository root over http://localhost.</p>
+    <p class="links">
+      <a href="https://github.com/LeonFedotov/infinity-knobs">Source and docs on GitHub</a>
+      · <a href="https://www.npmjs.com/package/infinity-knobs">npm</a>
+    </p>
   </main>
   <script type="module">
     import { knob, requestMidiAccess } from '../dist/index.js'

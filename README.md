@@ -12,6 +12,8 @@
   <a href="https://leonfedotov.github.io/infinity-knobs/examples/"><img src="https://img.shields.io/badge/example-live-00c853" alt="Live example"></a>
 </p>
 
+<p align="center"><a href="https://leonfedotov.github.io/infinity-knobs/examples/"><strong>Try the live example</strong></a> with a MIDI controller plugged in.</p>
+
 ---
 
 A MIDI knob sends a 7-bit value: 128 positions from end to end. That is too coarse to land on an exact value (spread over 20 Hz–20 kHz, the steps are almost a semitone apart), and the knob runs out at either end, even when the hardware itself turns forever.
@@ -37,6 +39,8 @@ pnpm add infinity-knobs
 ```
 
 ## Quick start
+
+The [live example](https://leonfedotov.github.io/infinity-knobs/examples/) is this code running in a page ([source](examples/index.html)).
 
 ```js
 import { knob, requestMidiAccess } from 'infinity-knobs'
