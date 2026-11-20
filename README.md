@@ -12,7 +12,7 @@
   <a href="https://leonfedotov.github.io/infinity-knobs/examples/"><img src="https://img.shields.io/badge/example-live-00c853" alt="Live example"></a>
 </p>
 
-<p align="center"><a href="https://leonfedotov.github.io/infinity-knobs/examples/"><strong>Try the live example</strong></a> with a MIDI controller plugged in.</p>
+<p align="center"><a href="https://leonfedotov.github.io/infinity-knobs/examples/"><strong>Try the live example</strong></a>: turn the on-screen knob, or connect a MIDI controller.</p>
 
 ---
 
@@ -281,7 +281,11 @@ Web MIDI needs a secure context: serve the page over https, or from `localhost` 
 
 ## Example
 
-[`examples/index.html`](examples/index.html) shows a knob's value, speed, rate and resets. Try it live at [leonfedotov.github.io/infinity-knobs/examples](https://leonfedotov.github.io/infinity-knobs/examples/) with a MIDI controller plugged in; the Pages workflow publishes it on every push to `main`. To run it locally, build, then serve the repository root over localhost:
+[`examples/index.html`](examples/index.html) tunes 20 Hz–20 kHz with one knob. It has an on-screen knob that behaves like an MPD218's: a simulated `MIDIAccess` that sends 0–127 at most once every 10 ms (up to 7 values in one when spun hard), goes silent at either end and takes the value sent back to it one message late. The page's `knob()` listens to it exactly as it would to a controller, so it works without one. Drag it, scroll over it or use the arrow keys (Shift spins it). Connect MIDI adds your own controller, which turns the same value.
+
+Next to the value it shows what the knob sends (0–127), so you can watch the knob run up to its end, be sent back to 64 and carry on, plus each reset, the last step in cents and the speed. Untick endless to see a knob run out.
+
+Try it live at [leonfedotov.github.io/infinity-knobs/examples](https://leonfedotov.github.io/infinity-knobs/examples/); the Pages workflow publishes it on every push to `main`. To run it locally, build, then serve the repository root over localhost:
 
 ```sh
 pnpm install

@@ -4,6 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>infinity-knobs example</title>
+  <meta name="description" content="Turn a precise, endless knob in your browser: tiny steps when you turn it slowly, big ones when you spin it, and it never runs out. Use the on-screen knob or your own MIDI controller.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="infinity-knobs: precise, endless MIDI knobs in the browser">
+  <meta property="og:description" content="Turn a precise, endless knob in your browser: tiny steps when you turn it slowly, big ones when you spin it, and it never runs out. Use the on-screen knob or your own MIDI controller.">
+  <meta property="og:url" content="https://leonfedotov.github.io/infinity-knobs/examples/">
   <link rel="icon" href="../logo.svg" type="image/svg+xml">
   <style>
     :root {
@@ -25,13 +30,98 @@
       color: var(--text);
       font: 15px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
-    main { width: min(30rem, 100% - 2rem); padding: 1.5rem 0; }
+    /* 16px gutters on a phone */
+    main { width: min(46rem, 100% - 32px); padding: 1.5rem 0 2rem; }
     h1 { font-size: 1.1rem; margin: 0 0 0.25rem; color: var(--green); }
     p { margin: 0 0 1rem; color: var(--dim); }
+    .how { color: var(--text); }
     label, button, input { font: inherit; }
-    input[type="checkbox"] { width: auto; accent-color: var(--green); }
-    .controls { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.25rem; }
-    input {
+
+    .stage {
+      display: grid;
+      grid-template-columns: 13rem minmax(0, 1fr);
+      gap: 1.25rem 2rem;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      padding: 1.25rem;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    /* The knob */
+    .dial {
+      width: 13rem;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      cursor: ns-resize;
+      touch-action: none; /* a drag turns the knob instead of scrolling the page */
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      outline-offset: 2px;
+    }
+    .dial:focus-visible { outline: 2px solid var(--green); }
+    .dial[aria-disabled="true"] { opacity: 0.35; cursor: default; }
+    .dial svg { display: block; width: 100%; height: 100%; overflow: visible; }
+    .ring { fill: none; stroke-width: 8; stroke-linecap: round; }
+    .track { stroke: var(--line); }
+    .lit { stroke: var(--green); filter: drop-shadow(0 0 3px rgb(0 255 0 / 0.7)); }
+    .tip { fill: var(--green); filter: drop-shadow(0 0 4px var(--green)); }
+    .zone { fill: none; stroke: var(--dim); stroke-width: 3; }
+    .mark { stroke: var(--dim); stroke-width: 2; }
+    .ends { fill: var(--dim); font-size: 11px; text-anchor: middle; }
+    .cap { fill: #0a110a; stroke: var(--line); stroke-width: 2; }
+    .ridges { fill: none; stroke: #182418; stroke-width: 6; }
+    .indicator { stroke: var(--text); stroke-width: 4; stroke-linecap: round; }
+
+    /* What it sends, and what that does */
+    .readouts { display: grid; gap: 0.9rem; min-width: 0; }
+    .pair { display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; align-items: flex-end; }
+    .label { display: block; color: var(--dim); font-size: 0.85em; }
+    .big { display: inline-block; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .raw { font-size: 2.6rem; min-width: 3ch; }
+    .value {
+      font-size: clamp(1.7rem, 7vw, 2.6rem);
+      min-width: 12ch;
+      color: var(--green);
+      text-shadow: 0 0 12px rgb(0 255 0 / 0.5);
+    }
+    .reset {
+      display: inline-block;
+      margin-left: 0.4rem;
+      padding: 0 0.4rem;
+      vertical-align: 0.6rem;
+      font-size: 0.8rem;
+      color: var(--dim);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      /* fades after each reset; see the reduced-motion rule below */
+      transition: color 0.4s, background-color 0.4s, border-color 0.4s;
+    }
+    .reset.lit { color: var(--bg); background: var(--green); border-color: var(--green); transition: none; }
+    .source { display: block; color: var(--dim); font-size: 0.85em; overflow-wrap: anywhere; }
+    .source:empty { display: none; } /* filled in only when a real controller sends */
+    .step { font-variant-numeric: tabular-nums; }
+    .meter { height: 0.6rem; margin: 0.35rem 0 0.2rem; background: var(--bg); border: 1px solid var(--line); border-radius: 99px; overflow: hidden; }
+    .meter div { height: 100%; width: 0; background: var(--green); box-shadow: 0 0 10px var(--green); }
+    .ends-row { display: flex; justify-content: space-between; gap: 1rem; color: var(--dim); font-size: 0.8em; }
+
+    /* The last few seconds */
+    .trace { grid-column: 1 / -1; margin: 0; }
+    .trace canvas { display: block; width: 100%; height: 5.5rem; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
+    .trace figcaption { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; margin-top: 0.4rem; color: var(--dim); font-size: 0.8em; }
+    .key::before { content: ''; display: inline-block; width: 1.2em; height: 0; margin-right: 0.4em; vertical-align: middle; border-top: 2px solid; }
+    .key.raw-key::before { border-color: var(--text); }
+    .key.value-key::before { border-color: var(--green); }
+    .key.reset-key::before { width: 0; height: 0.9em; border-top: 0; border-left: 2px solid rgb(0 255 0 / 0.5); }
+
+    dl { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 1.5rem; margin: 0 0 1.25rem; }
+    dt { color: var(--dim); }
+    dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+    .controls { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    input[type="number"] {
       width: 4.5rem;
       padding: 0.3rem 0.5rem;
       background: var(--panel);
@@ -39,6 +129,7 @@
       border: 1px solid var(--line);
       border-radius: 6px;
     }
+    input[type="checkbox"] { accent-color: var(--green); }
     button {
       padding: 0.35rem 0.9rem;
       background: var(--panel);
@@ -48,75 +139,291 @@
       cursor: pointer;
     }
     button:disabled { opacity: 0.5; cursor: default; }
-    .value {
-      display: block;
-      font-size: clamp(2rem, 9vw, 3.2rem);
-      color: var(--green);
-      text-shadow: 0 0 12px rgb(0 255 0 / 0.5);
-      font-variant-numeric: tabular-nums;
-    }
-    .meter { height: 0.6rem; margin: 0.75rem 0 1.25rem; background: var(--panel); border: 1px solid var(--line); border-radius: 99px; overflow: hidden; }
-    .meter div { height: 100%; width: 0; background: var(--green); box-shadow: 0 0 10px var(--green); }
-    dl { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 1.5rem; margin: 0 0 1rem; }
-    dt { color: var(--dim); }
-    dd { margin: 0; font-variant-numeric: tabular-nums; }
     #status { min-height: 1.5em; }
     .links { margin-top: 2rem; font-size: 0.9em; }
     .links a { color: var(--text); text-decoration-color: var(--dim); text-underline-offset: 3px; }
     .links a:hover { color: var(--green); }
+
+    @media (max-width: 40rem) {
+      .stage { grid-template-columns: minmax(0, 1fr); padding: 1rem; }
+      .dial { justify-self: center; width: 12rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      /* Resets still show, but switch off at once instead of fading */
+      .reset { transition: none; }
+    }
   </style>
 </head>
 <body>
   <main>
     <h1>infinity-knobs</h1>
-    <p>Turn a knob to tune 20 Hz to 20 kHz: slowly for a quarter of a cent per value, fast for 50 cents.</p>
-    <div class="controls">
-      <button id="connect" type="button">Connect MIDI</button>
-      <label>CC <input id="cc" type="number" min="0" max="127" value="3"></label>
-      <label><input id="endless" type="checkbox" checked> endless</label>
-    </div>
-    <output id="value" class="value">440.000 Hz</output>
-    <div class="meter" aria-hidden="true"><div id="meter"></div></div>
+    <p>Precise, endless MIDI knobs in the browser.</p>
+    <p class="how" id="how">Drag the knob up or down, scroll over it, or hold an arrow key (Shift spins it). Turned slowly, each value moves a quarter of a cent; spun fast, 50 cents. Near either end it is sent back to 64, so it never runs out.</p>
+
+    <section class="stage" aria-label="Knob">
+      <div id="dial" class="dial" role="slider" tabindex="0" aria-label="Frequency knob" aria-describedby="how"
+        aria-valuemin="0" aria-valuemax="127" aria-valuenow="64" aria-valuetext="440.000 Hz" aria-disabled="true">
+        <svg viewBox="0 0 200 200" aria-hidden="true" focusable="false">
+          <!-- The ring is 0–127 over 270°. Outside it, the reset zones: within 16 of either end
+               (the library's default margin), where a knob is sent back to 64, marked at the top. -->
+          <path class="ring track" d="M44.85 155.15A78 78 0 1 1 155.15 155.15"></path>
+          <path class="zone" d="M36.36 163.64A90 90 0 0 1 11.65 117.15"></path>
+          <path class="zone" d="M188.35 117.15A90 90 0 0 1 163.64 163.64"></path>
+          <line class="mark" x1="100" y1="6" x2="100" y2="13"></line>
+          <path id="lit" class="ring lit" d="M44.85 155.15A78 78 0 0 1 101.45 22.01"></path>
+          <circle id="tip" class="tip" r="5" cx="101.45" cy="22.01"></circle>
+          <text class="ends" x="44.8" y="177.2">0</text>
+          <text class="ends" x="155.2" y="177.2">127</text>
+          <!-- The knob itself turns as far as you turn it; the ring is the value it sends -->
+          <g id="cap">
+            <circle class="cap" cx="100" cy="100" r="62"></circle>
+            <circle class="ridges" cx="100" cy="100" r="57" pathLength="40" stroke-dasharray="0.25 0.75"></circle>
+            <line class="indicator" x1="100" y1="46" x2="100" y2="66"></line>
+          </g>
+        </svg>
+      </div>
+
+      <!-- Not live regions: these change up to 100 times a second. The knob's aria-valuetext has the value. -->
+      <div class="readouts">
+        <div class="pair">
+          <div>
+            <span class="label">knob sends</span>
+            <span id="raw" class="big raw">64</span><span id="reset" class="reset">reset to 64</span>
+          </div>
+          <div>
+            <span class="label">value</span>
+            <span id="value" class="big value">440.000 Hz</span>
+          </div>
+        </div>
+        <span id="source" class="source"></span>
+        <div>
+          <span class="label">last step</span>
+          <span id="step" class="step">none yet</span>
+          <div class="meter" aria-hidden="true"><div id="meter"></div></div>
+          <div class="ends-row" aria-hidden="true"><span>fine: 0.25 ¢ per value</span><span>coarse: 50 ¢</span></div>
+        </div>
+      </div>
+
+      <figure class="trace">
+        <canvas id="trace" role="img" aria-label="The last four seconds: the value the knob sends, which drops back to 64 at each reset, and the frequency it produces, which keeps going"></canvas>
+        <figcaption>
+          <span class="key raw-key">knob sends, 0–127</span>
+          <span class="key value-key">value, 20 Hz–20 kHz</span>
+          <span class="key reset-key">reset</span>
+          <span>last 4 s</span>
+        </figcaption>
+      </figure>
+    </section>
+
     <dl>
       <dt>speed</dt><dd id="speed">0.000</dd>
       <dt>rate</dt><dd id="rate">0 values/s</dd>
       <dt>last message</dt><dd id="last">none yet</dd>
       <dt>resets sent</dt><dd id="resets">0</dd>
     </dl>
-    <p id="status">Build first (pnpm build), then serve the repository root over http://localhost.</p>
+
+    <div class="controls">
+      <button id="connect" type="button">Connect MIDI</button>
+      <label>CC <input id="cc" type="number" min="0" max="127" value="3"></label>
+      <label><input id="endless" type="checkbox" checked> endless</label>
+    </div>
+    <p id="status" role="status">Build first (pnpm build), then serve the repository root over http://localhost.</p>
     <p class="links">
       <a href="https://github.com/LeonFedotov/infinity-knobs">Source and docs on GitHub</a>
       · <a href="https://www.npmjs.com/package/infinity-knobs">npm</a>
     </p>
   </main>
   <script type="module">
-    import { knob, requestMidiAccess } from '../dist/index.js'
+    import { defaults, knob, listen, requestMidiAccess } from '../dist/index.js'
 
     const $ = (id) => document.getElementById(id)
     // The library loaded, so the build hint in the markup (shown if it didn't) can go
-    $('status').textContent = 'Plug in a MIDI controller, then press Connect MIDI.'
-    let access
-    let frequency
-    let resets = 0
-    let lastTurnAt = 0
-    let lastSpeed = 0
+    $('status').textContent = 'Have a MIDI controller? Connect it, and its knob on this CC (3 is the MPD218\'s first) turns the same value. Untick endless to see a knob run out.'
 
-    const show = (hz, turn) => {
-      $('value').textContent = `${hz.toFixed(3)} Hz`
-      $('speed').textContent = turn.speed.toFixed(3)
-      $('rate').textContent = `${Math.round(turn.rate)} values/s`
-      $('last').textContent = `CC ${turn.cc} = ${turn.value} on channel ${turn.channel + 1} (${turn.delta >= 0 ? '+' : ''}${turn.delta})`
-      if (turn.recentred) $('resets').textContent = String(++resets)
-      lastSpeed = turn.speed
-      lastTurnAt = performance.now()
+    const CONTROL_CHANGE = 0xb0
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
+
+    // ---- The on-screen knob: an MPD218 knob behind a MIDIAccess ----
+
+    const MESSAGE_MS = 10 // the MPD218 sends at most one message every 10 ms or so…
+    const MOST_PER_MESSAGE = 7 // …skipping up to 7 values in one when spun hard
+    const FEEDBACK_MS = 20 // a value sent back lands after the message on its way, or by now if the knob stopped
+
+    // One knob of an Akai MPD218 in CC mode, as a MIDIAccess with one input and one output, so the
+    // library listens to it exactly as it would to the real controller. Like the MPD218, it sends
+    // absolute values from 0 to 127, goes silent at either end however far it is turned, and carries
+    // on from a value sent back to it on its CC. That value lands one message late, as over USB: the
+    // message already on its way left from the old position.
+    const onScreenKnob = ({ onMove }) => {
+      const name = 'On-screen knob'
+      const manufacturer = 'infinity-knobs'
+      const port = (fields) => Object.assign(new EventTarget(), { name, manufacturer, state: 'connected', connection: 'open', ...fields })
+      let cc = 3
+      let position = defaults.centre
+      let travel = 0 // turned but not sent yet, in values
+      let sentAt = -Infinity
+      let timer
+      let feedback // the last value sent back to it, until it lands
+      let inFlight = 0 // its own messages still to go before that
+
+      const moveTo = (next) => {
+        position = next
+        onMove(position)
+      }
+      const land = () => {
+        moveTo(feedback.value)
+        feedback = undefined
+      }
+
+      const input = port({ id: 'on-screen-knob-input', type: 'input' })
+      const output = port({
+        id: 'on-screen-knob-output',
+        type: 'output',
+        send: ([status, number, value]) => {
+          if (status !== CONTROL_CHANGE || number !== cc) return // it listens on channel 1, its own CC
+          const sent = { value: clamp(value, 0, 127) }
+          feedback = sent
+          inFlight = 1
+          setTimeout(() => feedback === sent && land(), FEEDBACK_MS)
+        },
+      })
+      const access = Object.assign(new EventTarget(), {
+        inputs: new Map([[input.id, input]]),
+        outputs: new Map([[output.id, output]]),
+        sysexEnabled: false,
+      })
+
+      const sendMessage = () => {
+        timer = undefined
+        if (feedback && inFlight === 0) land()
+        const moved = clamp(Math.trunc(travel), -MOST_PER_MESSAGE, MOST_PER_MESSAGE)
+        if (moved === 0) return
+        travel -= moved
+        const next = clamp(position + moved, 0, 127)
+        if (next !== position) {
+          if (feedback) inFlight -= 1
+          sentAt = performance.now()
+          moveTo(next)
+          input.dispatchEvent(Object.assign(new Event('midimessage'), { data: Uint8Array.of(CONTROL_CHANGE, cc, next) }))
+        }
+        if (Math.abs(travel) >= 1) schedule()
+      }
+
+      // Sends at once if the last message went long enough ago, else as soon as it may
+      const schedule = () => {
+        if (timer !== undefined) return
+        const wait = sentAt + MESSAGE_MS - performance.now()
+        if (wait > 0) timer = setTimeout(sendMessage, Math.ceil(wait)) // timers may fire up to 1 ms early
+        else sendMessage()
+      }
+
+      return {
+        access,
+        input,
+        // Turned faster than it sends, the knob skips: at most two messages' worth waits to go
+        turn: (values) => {
+          travel = clamp(travel + values, -2 * MOST_PER_MESSAGE, 2 * MOST_PER_MESSAGE)
+          schedule()
+        },
+        tune: (number) => {
+          cc = number
+        },
+      }
     }
 
-    // (Re)binds the knob to the chosen CC, keeping its value
+    // One MIDIAccess with the on-screen knob's ports and, once connected, the browser's, so a real
+    // controller and the on-screen knob turn the same value. Ports are listed afresh each time, so
+    // devices plugged in later are found, and outputs are wrapped to show each reset as it is sent.
+    const combined = ({ onSend }) => {
+      const accesses = []
+      const access = new EventTarget()
+      const announce = () => access.dispatchEvent(new Event('statechange'))
+      const ports = (kind) => accesses.flatMap((each) => [...each[kind].values()])
+      const tapped = (output) => ({
+        id: output.id,
+        name: output.name,
+        manufacturer: output.manufacturer,
+        type: output.type,
+        state: output.state,
+        connection: output.connection,
+        send: (data, timestamp) => {
+          output.send(data, timestamp)
+          onSend(data, output)
+        },
+      })
+      Object.defineProperties(access, {
+        inputs: { get: () => new Map(ports('inputs').map((input) => [input.id, input])) },
+        outputs: { get: () => new Map(ports('outputs').map((output) => [output.id, tapped(output)])) },
+        sysexEnabled: { value: false },
+      })
+      const add = (more) => {
+        accesses.push(more)
+        more.addEventListener('statechange', announce)
+        announce() // listeners pick up its inputs, as when a device is plugged in
+      }
+      return { access, add }
+    }
+
+    // ---- What the page shows ----
+
+    const TRACE_MS = 4000
+    const FLASH_MS = 200
+    const ARIA_MS = 200 // screen readers hear the value at most this often while it moves
+    const started = performance.now()
+    const view = {
+      position: defaults.centre, // where the on-screen knob is, 0–127
+      rotation: 0, // how far it has been turned, in values
+      hz: 440,
+      turn: undefined, // the last turn that moved the value
+      turnAt: -Infinity,
+      message: undefined, // the last message on the CC, from any knob
+      resets: 0,
+      resetAt: -Infinity,
+      activeAt: started,
+    }
+    const traces = {
+      raw: [{ time: started, value: defaults.centre }],
+      hz: [{ time: started, value: view.hz }],
+      resets: [],
+    }
+
+    let frame
+    const wake = () => {
+      view.activeAt = performance.now()
+      frame ??= requestAnimationFrame(render)
+    }
+
+    const controller = onScreenKnob({
+      onMove: (position) => {
+        view.position = position
+        wake()
+      },
+    })
+    const midi = combined({
+      onSend: () => {
+        view.resets += 1
+        view.resetAt = performance.now()
+        traces.resets.push(view.resetAt)
+        wake()
+      },
+    })
+    midi.add(controller.access)
+
+    // ---- The library: the value, and every message for the display ----
+
+    let frequency
+    let messages
     const bind = () => {
+      const cc = clamp(Math.round(Number($('cc').value)) || 0, 0, 127)
+      $('cc').value = String(cc)
+      controller.tune(cc)
       const value = frequency?.value ?? 440
       frequency?.dispose()
-      frequency = knob(access, {
-        cc: Number($('cc').value),
+      messages?.dispose()
+      // This is all an app needs: 20 Hz to 20 kHz, a quarter of a cent per value when turned slowly,
+      // 50 cents when spun hard
+      frequency = knob(midi.access, {
+        cc,
         value,
         min: 20,
         max: 20000,
@@ -124,32 +431,288 @@
         fine: 0.25,
         coarse: 50,
         endless: $('endless').checked,
-        onChange: show,
+        onChange: (hz, turn) => {
+          view.hz = hz
+          view.turn = turn
+          view.turnAt = performance.now()
+          traces.hz.push({ time: view.turnAt, value: hz })
+          wake()
+        },
+      })
+      // For the display only: every message on the CC, including ones that don't move the value (a
+      // knob's first, which only anchors it, or any at either end of the range). It sends nothing.
+      messages = listen(midi.access, {
+        cc,
+        fine: 0,
+        coarse: 0,
+        onTurn: (turn) => {
+          view.message = turn
+          traces.raw.push({ time: performance.now(), value: turn.value })
+          wake()
+        },
       })
     }
 
-    // The meter shows the speed once per frame, and falls back to rest once the knob stops.
-    // Setting it per message (every 10 ms on a fast spin) would keep restarting any animation.
-    const settle = () => {
-      const speed = performance.now() - lastTurnAt > 250 ? 0 : lastSpeed
-      $('meter').style.width = `${speed * 100}%`
-      requestAnimationFrame(settle)
+    // ---- Drawing, once per frame ----
+
+    const ARC = 270 // degrees of the ring, from 0 to 127
+    const RING = 78
+    const angleOf = (value) => -ARC / 2 + (ARC * value) / 127
+    const point = (angle, radius) => {
+      const radians = (angle * Math.PI) / 180
+      return [100 + radius * Math.sin(radians), 100 - radius * Math.cos(radians)]
     }
+    const arc = (from, to, radius = RING) => {
+      const [x1, y1] = point(angleOf(from), radius)
+      const [x2, y2] = point(angleOf(to), radius)
+      const large = angleOf(to) - angleOf(from) > 180 ? 1 : 0
+      return `M${x1.toFixed(2)} ${y1.toFixed(2)}A${radius} ${radius} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`
+    }
+
+    // Writes only what changed, so screen readers and layout aren't disturbed for nothing
+    const setText = (element, text) => {
+      if (element.textContent !== text) element.textContent = text
+    }
+    const setAttr = (element, name, value) => {
+      if (element.getAttribute(name) !== value) element.setAttribute(name, value)
+    }
+    const signed = (number, digits = 0) => `${number < 0 ? '−' : '+'}${Math.abs(number).toFixed(digits)}`
+    const formatHz = (hz) => `${hz.toFixed(3)} Hz`
+
+    const canvas = $('trace')
+    const context = canvas.getContext('2d')
+    const css = getComputedStyle(document.documentElement)
+    const colours = { text: css.getPropertyValue('--text').trim(), green: css.getPropertyValue('--green').trim(), line: css.getPropertyValue('--line').trim() }
+
+    // Keeps the points inside the window, and the one before it, which the line comes in from
+    const prune = (points, since) => {
+      while (points.length > 1 && points[1].time < since) points.shift()
+    }
+
+    const drawTrace = (now) => {
+      const ratio = window.devicePixelRatio || 1
+      const width = Math.round(canvas.clientWidth * ratio)
+      const height = Math.round(canvas.clientHeight * ratio)
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width
+        canvas.height = height
+      }
+      const pad = 6 * ratio
+      const x = (time) => width - ((now - time) / TRACE_MS) * width
+      const y = (fraction) => height - pad - fraction * (height - 2 * pad)
+      context.clearRect(0, 0, width, height)
+
+      // The reset zones of 0–127
+      context.fillStyle = colours.line
+      context.globalAlpha = 0.5
+      context.fillRect(0, y(1), width, y((127 - defaults.margin) / 127) - y(1))
+      context.fillRect(0, y(defaults.margin / 127), width, y(0) - y(defaults.margin / 127))
+      context.globalAlpha = 1
+
+      context.lineWidth = ratio
+      context.strokeStyle = 'rgb(0 255 0 / 0.5)'
+      context.beginPath()
+      traces.resets.forEach((time) => {
+        context.moveTo(Math.round(x(time)) + 0.5, 0)
+        context.lineTo(Math.round(x(time)) + 0.5, height)
+      })
+      context.stroke()
+
+      // Steps, since a value holds until the next message
+      const line = (points, fraction, colour, lineWidth, glow) => {
+        context.strokeStyle = colour
+        context.lineWidth = lineWidth * ratio
+        context.shadowColor = colour
+        context.shadowBlur = glow * ratio
+        context.beginPath()
+        points.forEach(({ time, value }, index) => {
+          const next = y(fraction(value))
+          if (index === 0) context.moveTo(x(time), next)
+          else {
+            context.lineTo(x(time), y(fraction(points[index - 1].value)))
+            context.lineTo(x(time), next)
+          }
+        })
+        context.lineTo(width, y(fraction(points.at(-1).value)))
+        context.stroke()
+        context.shadowBlur = 0
+      }
+      line(traces.raw, (value) => value / 127, colours.text, 1.5, 0)
+      line(traces.hz, (hz) => Math.log2(hz / 20) / Math.log2(1000), colours.green, 2, 6)
+    }
+
+    let ariaAt = -Infinity
+    const render = () => {
+      frame = undefined
+      const now = performance.now()
+      const { turn, message } = view
+
+      // The ring is what the knob sends; the knob itself keeps turning, even at an end
+      setAttr($('lit'), 'd', view.position > 0 ? arc(0, view.position) : '')
+      const [tipX, tipY] = point(angleOf(view.position), RING)
+      setAttr($('tip'), 'cx', tipX.toFixed(2))
+      setAttr($('tip'), 'cy', tipY.toFixed(2))
+      setAttr($('cap'), 'transform', `rotate(${((view.rotation * ARC) / 127).toFixed(1)} 100 100)`)
+      if (now - ariaAt >= ARIA_MS) {
+        setAttr(dial, 'aria-valuenow', String(view.position))
+        setAttr(dial, 'aria-valuetext', formatHz(view.hz))
+        ariaAt = now
+      }
+
+      setText($('raw'), String(message?.value ?? defaults.centre))
+      $('reset').classList.toggle('lit', now - view.resetAt < FLASH_MS)
+      setText($('source'), message && message.input !== controller.input ? `from ${message.input.name}` : '')
+      setText($('value'), formatHz(view.hz))
+      if (turn) {
+        const values = Math.abs(turn.delta) === 1 ? 'value' : 'values'
+        setText($('step'), `${signed(turn.delta)} ${values} × ${(turn.step / turn.delta).toFixed(2)} ¢ = ${signed(turn.step, 2)} ¢`)
+      }
+
+      // The speed falls back to rest once the knob stops, as the library's does
+      const moving = turn && now - view.turnAt <= defaults.pauseMs
+      $('meter').style.width = `${(moving ? turn.speed : 0) * 100}%`
+      setText($('speed'), (moving ? turn.speed : 0).toFixed(3))
+      setText($('rate'), `${moving ? Math.round(turn.rate) : 0} values/s`)
+      if (message) {
+        const from = message.input === controller.input ? 'the on-screen knob' : message.input.name
+        setText($('last'), `CC ${message.cc} = ${message.value} on channel ${message.channel + 1}, from ${from}`)
+      }
+      setText($('resets'), String(view.resets))
+
+      const since = now - TRACE_MS
+      prune(traces.raw, since)
+      prune(traces.hz, since)
+      while (traces.resets.length > 0 && traces.resets[0] < since) traces.resets.shift()
+      drawTrace(now)
+
+      // Keeps drawing while the trace still has something to scroll
+      if (now - view.activeAt < TRACE_MS) frame = requestAnimationFrame(render)
+    }
+
+    // ---- Turning the on-screen knob ----
+
+    const DRAG_PX = 2 // px dragged per value: 120 px a second is a careful turn, 1000 a hard spin
+    const WHEEL_PX = 10 // px scrolled per value
+    const HOLD_MS = 300 // a key held this long turns the knob continuously…
+    const HELD_RATE = [30, 130] // …at a careful 30 values a second, rising to 130 over a second
+    const SPIN_RATE = 500 // values a second, as hard as an MPD218 was measured to spin
+    const dial = $('dial')
+
+    const turnKnob = (values) => {
+      view.rotation += values
+      controller.turn(values)
+      wake()
+    }
+
+    // Dragging: up or right turns it up. The faster the drag, the faster the knob turns.
+    let drag
+    dial.addEventListener('pointerdown', (event) => {
+      if (drag || event.button !== 0) return
+      // Left to the browser, a press focuses the knob for the keys without a keyboard focus ring;
+      // user-select and touch-action in the CSS keep a drag from selecting text or scrolling
+      dial.setPointerCapture(event.pointerId)
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY }
+    })
+    dial.addEventListener('pointermove', (event) => {
+      if (event.pointerId !== drag?.id) return
+      const moved = (drag.y - event.clientY + event.clientX - drag.x) / DRAG_PX
+      drag = { ...drag, x: event.clientX, y: event.clientY }
+      if (moved !== 0) turnKnob(moved)
+    })
+    const endDrag = (event) => {
+      if (event.pointerId === drag?.id) drag = undefined
+    }
+    dial.addEventListener('pointerup', endDrag)
+    dial.addEventListener('pointercancel', endDrag)
+    dial.addEventListener('lostpointercapture', endDrag)
+    dial.addEventListener('contextmenu', (event) => event.preventDefault()) // a long press on a phone
+
+    // The wheel or a trackpad: scrolling up turns it up
+    dial.addEventListener('wheel', (event) => {
+      event.preventDefault() // turn the knob, not the page
+      const perValue = [WHEEL_PX, 1, 1 / 30][event.deltaMode] ?? WHEEL_PX // pixels, lines or pages
+      turnKnob(-event.deltaY / perValue)
+    }, { passive: false })
+
+    // Keys: a press moves one value; held, the knob keeps turning, like a hand left on it. Shift (or
+    // Page Up and Page Down) spins it hard at once, so even a quick press is a flick.
+    const directions = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: 1, PageDown: -1 }
+    let held
+    let shift = false
+    let spunAt
+    const keyRate = (now) => {
+      if (!held) return 0
+      if (held.hard || shift) return held.direction * SPIN_RATE
+      const heldFor = now - held.since - HOLD_MS
+      if (heldFor < 0) return 0
+      const [slow, fast] = HELD_RATE
+      return held.direction * Math.min(fast, slow + ((fast - slow) * heldFor) / 1000)
+    }
+    const spin = () => {
+      if (!held) {
+        spunAt = undefined
+        return
+      }
+      const now = performance.now()
+      const rate = keyRate(now)
+      if (rate !== 0) turnKnob((rate * Math.min(now - spunAt, 50)) / 1000)
+      spunAt = now
+      requestAnimationFrame(spin)
+    }
+    dial.addEventListener('keydown', (event) => {
+      shift = event.shiftKey
+      const direction = directions[event.key]
+      if (!direction || event.altKey || event.ctrlKey || event.metaKey) return
+      event.preventDefault()
+      if (event.repeat) return // holding is timed here, not by the keyboard's repeat
+      turnKnob(direction)
+      held = { key: event.key, direction, hard: event.key.startsWith('Page'), since: performance.now() }
+      if (spunAt === undefined) {
+        spunAt = performance.now()
+        requestAnimationFrame(spin)
+      }
+    })
+    dial.addEventListener('keyup', (event) => {
+      shift = event.shiftKey
+      if (event.key === held?.key) held = undefined
+    })
+    dial.addEventListener('blur', () => {
+      held = undefined
+      shift = false
+    })
+
+    // ---- A real controller ----
 
     $('connect').addEventListener('click', async () => {
       try {
-        access = await requestMidiAccess()
-        const names = [...access.inputs.values()].map((input) => input.name).join(', ')
-        $('status').textContent = names ? `Listening to ${names}.` : 'No MIDI inputs yet; plug one in.'
+        const access = await requestMidiAccess()
+        midi.add(access)
         $('connect').disabled = true
-        bind()
-        requestAnimationFrame(settle)
+        $('connect').textContent = 'MIDI connected'
+        const describe = () => {
+          const names = [...access.inputs.values()].map((input) => input.name)
+          $('status').textContent = names.length > 0
+            ? `Listening to ${names.join(', ')} and the on-screen knob.`
+            : 'No MIDI controller found yet; plug one in. The on-screen knob works meanwhile.'
+        }
+        access.addEventListener('statechange', describe)
+        describe()
       } catch (error) {
-        $('status').textContent = error.message
+        $('status').textContent = `${error.message} The on-screen knob works anyway.`
       }
     })
-    $('cc').addEventListener('change', () => access && bind())
-    $('endless').addEventListener('change', () => access && bind())
+    $('cc').addEventListener('change', bind)
+    $('endless').addEventListener('change', () => {
+      bind()
+      // A knob at its end sends nothing when turned further, so nothing can send it back yet
+      if ($('endless').checked && (view.position === 0 || view.position === 127)) {
+        $('status').textContent = 'The knob is at its end, where turning it further sends nothing. Turn it back a little and it carries on from the middle.'
+      }
+    })
+
+    bind()
+    dial.removeAttribute('aria-disabled')
+    wake()
   </script>
 </body>
 </html>
